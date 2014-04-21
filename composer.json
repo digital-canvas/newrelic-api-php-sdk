@@ -1,0 +1,24 @@
+{
+    "name": "digital-canvas/newrelic-api-php-sdk",
+    "description": "PHP implementation of the New Relic API",
+    "keywords": ["newrelic", "monitoring", "api"],
+    "license": "MIT",
+    "type" : "library",
+    "authors": [
+        {
+            "name": "Jonathan Bernardi",
+            "email": "jonathan@digitalcanvas.com"
+        }
+    ],
+    "minimum-stability": "stable",
+    "suggest": {
+        "guzzle/guzzle": "Use guzzle for making http requests.",
+        "zendframework/zend-http": "Use ZF2 Zend\\HTTP for making http requests.",
+        "zendframework/zendframework1": "Use Zend_HTTP_Client for making http requests."
+    },
+    "autoload": {
+        "psr-0": {
+            "DigitalCanvas\\NewRelic\\": "./"
+        }
+    }
+}
