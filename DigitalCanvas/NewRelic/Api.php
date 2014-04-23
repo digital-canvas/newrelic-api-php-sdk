@@ -12,7 +12,8 @@ use DigitalCanvas\NewRelic\Adapter\Curl as CurlAdapter;
  * @package NewRelic
  * @category Api
  */
-class Api {
+class Api
+{
 
     const VERSION = 'v2';
 
@@ -35,6 +36,7 @@ class Api {
 
     /**
      * HTTP Client Adapter
+     *
      * @var HttpClientInterface $adapter
      */
     protected $adapter = null;
@@ -52,30 +54,103 @@ class Api {
         $this->url = self::URL . "/" . self::VERSION . "/";
     }
 
+    /**
+     * Returns list of servers
+     * @return Response
+     */
     public function getServerList()
     {
-      $path = "servers.json";
-      $request = $this->buildRequest($path);
-      return $this->getHTTPClientAdapter()->sendRequest($request);
+        $path = "servers.json";
+        $request = $this->buildRequest($path);
+        return $this->getHTTPClientAdapter()->sendRequest($request);
     }
 
+    /**
+     * Returns details for a single server
+     * @param int $server_id
+     * @return Response
+     */
     public function getServerDetails($server_id)
     {
-      $path = "servers/{$server_id}.json";
-      $request = $this->buildRequest($path);
-      return $this->getHTTPClientAdapter()->sendRequest($request);
+        $server_id = (int)$server_id;
+        $path = "servers/{$server_id}.json";
+        $request = $this->buildRequest($path);
+        return $this->getHTTPClientAdapter()->sendRequest($request);
     }
 
+    /**
+     * Returns list of server matching a given name
+     * @param string $server_name
+     * @return Response
+     */
     public function findServerByName($server_name)
     {
-      $path = "servers.json";
-      $params = array(
-        'filter' => array(
-          'name' => $server_name
-        )
-      );
-      $request = $this->buildRequest($path);
-      return $this->getHTTPClientAdapter()->sendRequest($request);
+        $path = "servers.json";
+        $params = array(
+          'filter' => array(
+            'name' => $server_name
+          )
+        );
+        $request = $this->buildRequest($path);
+        return $this->getHTTPClientAdapter()->sendRequest($request);
+    }
+
+    /**
+     * Returns list of alert policies
+     * @param string $type
+     * @param string $name
+     * @param string $id
+     * @param boolean $enabled
+     * @return Response
+     */
+    public function listAlertPolicies($type = null, $name = null, $id = null, $enabled = null)
+    {
+        $path = "alert_policies.json";
+        $enabled = !is_null($enabled) ? (($enabled) ? 'true' : 'false') : null;
+        $params = array(
+          'filter' => array(
+            'ids' => $id,
+            'type' => $type,
+            'name' => $name,
+            'enabled' => $enabled
+          )
+        );
+        $request = $this->buildRequest($path, $params);
+        return $this->getHTTPClientAdapter()->sendRequest($request);
+    }
+
+    /**
+     * Returns details for a single alerty policy
+     * @param int $policy_id
+     * @return Response
+     */
+    public function getAlertPolicyDetails($policy_id)
+    {
+        $policy_id = (int)$policy_id;
+        $path = "alert_policies/{$policy_id}.json";
+        $request = $this->buildRequest($path);
+        return $this->getHTTPClientAdapter()->sendRequest($request);
+    }
+
+
+    /**
+     * Finds alert policies associated with a given server
+     * @param int $server_id
+     * @return Response
+     */
+    public function findAlertPoliciesByServer($server_id)
+    {
+        $response = $this->listAlertPolicies('server', null, null, true);
+        $body = $response->getBody();
+        foreach ($body['alert_policies'] as $key => $policy) {
+            if (!in_array($server_id, $policy['links']['servers'])) {
+                // Remove policies not associated with the server
+                unset($body['alert_policies'][$key]);
+            }
+        }
+        // Reset response body
+        $response->setBody($body);
+        return $response;
     }
 
     /**
@@ -92,55 +167,56 @@ class Api {
     }
 
     /**
-   * Sets the HTTP Client Adapter
-   *
-   * If not provided Curl adapter will be used
-   *
-   * @param HttpClientInterface $adapter
-   * @return Api
-   */
-  public function setHTTPClientAdapter(HttpClientInterface $adapter = null)
-  {
-    if (is_null($adapter)) {
-      $adapter = new CurlAdapter();
+     * Sets the HTTP Client Adapter
+     *
+     * If not provided Curl adapter will be used
+     *
+     * @param HttpClientInterface $adapter
+     * @return Api
+     */
+    public function setHTTPClientAdapter(HttpClientInterface $adapter = null)
+    {
+        if (is_null($adapter)) {
+            $adapter = new CurlAdapter();
+        }
+        $this->adapter = $adapter;
+        return $this;
     }
-    $this->adapter = $adapter;
-    return $this;
-  }
 
-  /**
-   * Returns current HTTP Client Adapter
-   *
-   * @return HttpClientInterface
-   */
-  public function getHTTPClientAdapter()
-  {
-    if(is_null($this->adapter)){
-      $this->setHTTPClientAdapter(null);
+    /**
+     * Returns current HTTP Client Adapter
+     *
+     * @return HttpClientInterface
+     */
+    public function getHTTPClientAdapter()
+    {
+        if (is_null($this->adapter)) {
+            $this->setHTTPClientAdapter(null);
+        }
+        return $this->adapter;
     }
-    return $this->adapter;
-  }
 
-  /**
-   * Builds the Request object
-   * @param type $path
-   * @param array $params
-   * @param string $method
-   * @return Request
-   */
-  protected function buildRequest($path, array $params = array(), $method = "GET")
-  {
-    $uri = $this->url . $path;
-    $headers = array(
-      'X-Api-Key' => $this->api_key,
-    );
-    $request = new Request();
-    $request->setUri($uri);
-    $request->setMethod($method);
-    $request->setParams($params);
-    $request->setHeaders($headers);
-    return $request;
-  }
+    /**
+     * Builds the Request object
+     *
+     * @param type $path
+     * @param array $params
+     * @param string $method
+     * @return Request
+     */
+    protected function buildRequest($path, array $params = array(), $method = "GET")
+    {
+        $uri = $this->url . $path;
+        $headers = array(
+          'X-Api-Key' => $this->api_key,
+        );
+        $request = new Request();
+        $request->setUri($uri);
+        $request->setMethod($method);
+        $request->setParams($params);
+        $request->setHeaders($headers);
+        return $request;
+    }
 
 
 }
